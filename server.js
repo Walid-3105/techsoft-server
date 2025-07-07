@@ -7,6 +7,8 @@ require("dotenv").config();
 const fs = require("fs").promises;
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const cloudinary = require("cloudinary").v2;
+const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
 const app = express();
 app.use(cors());
@@ -24,17 +26,23 @@ const FooterLink = require("./models/FooterLink");
 const User = require("./models/User");
 const Category = require("./models/Category");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, "uploads");
-    fs.mkdir(uploadDir, { recursive: true })
-      .then(() => cb(null, uploadDir))
-      .catch((err) => cb(err));
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+// Cloudinary Config
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Use Cloudinary for image uploads
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: "my_project", // change as needed
+    allowed_formats: ["jpg", "jpeg", "png"],
+    transformation: [{ width: 800, height: 600, crop: "limit" }],
   },
 });
+
 const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -94,28 +102,13 @@ app.get("/api/sliders", async (req, res) => {
 
 app.post("/api/sliders", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) {
-      console.error("No file uploaded in request");
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-    console.log("File uploaded:", {
-      filename: req.file.filename,
-      path: req.file.path,
-      size: req.file.size,
-    });
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const imageUrl = req.file.path; // Cloudinary gives public URL here
     const newSlider = new Slider({ imageUrl });
     await newSlider.save();
-    console.log("Slider saved to database:", imageUrl);
     res.json({ success: true, imageUrl });
   } catch (error) {
-    console.error("Slider upload error:", {
-      message: error.message,
-      stack: error.stack,
-    });
-    res
-      .status(500)
-      .json({ error: "Failed to upload slider", details: error.message });
+    console.error("Slider upload error:", error);
+    res.status(500).json({ error: "Failed to upload slider" });
   }
 });
 
@@ -149,28 +142,16 @@ app.get("/api/channels", async (req, res) => {
 
 app.post("/api/channels", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file || !req.body.category) {
-      return res.status(400).json({ error: "Missing file, name, or category" });
-    }
-    const imageUrl = `/uploads/${req.file.filename}`;
+    const imageUrl = req.file.path;
     const newChannel = new Channel({
       imageUrl,
       category: req.body.category,
     });
     await newChannel.save();
-    console.log("Channel saved to database:", {
-      category: req.body.category,
-      imageUrl,
-    });
     res.json({ success: true, imageUrl });
   } catch (error) {
-    console.error("Channel upload error:", {
-      message: error.message,
-      stack: error.stack,
-    });
-    res
-      .status(500)
-      .json({ error: "Failed to upload channel", details: error.message });
+    console.error("Channel upload error:", error);
+    res.status(500).json({ error: "Failed to upload channel" });
   }
 });
 
