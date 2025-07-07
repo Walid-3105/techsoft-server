@@ -4,17 +4,7 @@ const channelSchema = new mongoose.Schema({
   imageUrl: { type: String, required: true },
   category: {
     type: String,
-    required: true,
-    enum: [
-      "ENTERTAINMENT",
-      "NEWS",
-      "MOVIES",
-      "INFOTAINMENT",
-      "KIDS",
-      "MUSIC",
-      "RELIGIOUS",
-      "SPORTS",
-    ],
+    required: true, // ✅ Keep this to make sure category is not empty
   },
 });
 

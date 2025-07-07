@@ -22,6 +22,7 @@ const Slider = require("./models/Slider");
 const Channel = require("./models/Channel");
 const FooterLink = require("./models/FooterLink");
 const User = require("./models/User");
+const Category = require("./models/Category");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -199,9 +200,47 @@ app.delete("/api/channels/:id", async (req, res) => {
   }
 });
 
+// Get all categories
+app.get("/api/categories", async (req, res) => {
+  try {
+    const categories = await Category.find().sort({ name: 1 });
+    res.json(categories);
+  } catch {
+    res.status(500).json({ error: "Failed to fetch categories" });
+  }
+});
+
+// Add a new category
+app.post("/api/categories", async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: "Category name required" });
+
+  try {
+    const exists = await Category.findOne({ name: name.toUpperCase() });
+    if (exists)
+      return res.status(400).json({ error: "Category already exists" });
+
+    const category = new Category({ name: name.toUpperCase() });
+    await category.save();
+    res.json(category);
+  } catch {
+    res.status(500).json({ error: "Failed to add category" });
+  }
+});
+
+// Delete a category
+app.delete("/api/categories/:id", async (req, res) => {
+  try {
+    await Category.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: "Failed to delete category" });
+  }
+});
+
 app.get("/api/footer-links", async (req, res) => {
   try {
-    const footerData = await FooterLink.findOne(); // assuming one document stores all footer data
+    const footerData = await FooterLink.findOne();
     if (!footerData) {
       return res.status(404).json({
         quickLinks: [],
