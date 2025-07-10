@@ -16,7 +16,11 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 mongoose
-  .connect(process.env.MONGO_URI, {})
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 10000,
+  })
   .then(() => console.log("MongoDB connected successfully"))
   .catch((error) => console.error("MongoDB connection error:", error));
 
@@ -52,6 +56,10 @@ const upload = multer({
     }
     cb(null, true);
   },
+});
+
+app.get("/", (req, res) => {
+  res.send("API is running ✅");
 });
 
 app.post("/api/login", async (req, res) => {
@@ -96,8 +104,13 @@ app.post("/api/register", async (req, res) => {
 });
 
 app.get("/api/sliders", async (req, res) => {
-  const sliders = await Slider.find();
-  res.json(sliders);
+  try {
+    const sliders = await Slider.find();
+    res.json(sliders);
+  } catch (err) {
+    console.error("Error fetching sliders:", err);
+    res.status(500).json({ error: "Failed to fetch sliders" });
+  }
 });
 
 app.post("/api/sliders", upload.single("image"), async (req, res) => {
