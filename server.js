@@ -117,7 +117,6 @@ app.delete("/api/sliders/:id", async (req, res) => {
     const slider = await Slider.findById(req.params.id);
     if (!slider) return res.status(404).json({ error: "Slider not found" });
 
-    // Extract public_id from image URL
     const urlParts = slider.imageUrl.split("/");
     const filenameWithExt = urlParts[urlParts.length - 1]; // e.g., my-image.jpg
     const filenameWithoutExt = filenameWithExt.split(".")[0]; // my-image
@@ -128,10 +127,7 @@ app.delete("/api/sliders/:id", async (req, res) => {
       ? `${folderPath}/${filenameWithoutExt}`
       : filenameWithoutExt;
 
-    // Delete image from Cloudinary
     await cloudinary.uploader.destroy(publicId);
-
-    // Delete from MongoDB
     await Slider.deleteOne({ _id: req.params.id });
 
     res.json({ success: true });
@@ -167,19 +163,26 @@ app.delete("/api/channels/:id", async (req, res) => {
     if (!channel) {
       return res.status(404).json({ error: "Channel not found" });
     }
-    const filePath = path.join(
-      __dirname,
-      "uploads",
-      channel.imageUrl.split("/uploads/")[1]
-    );
-    try {
-      await fs.unlink(filePath);
-      console.log(`File deleted: ${filePath}`);
-    } catch (fileError) {
-      console.warn(`Failed to delete file: ${filePath}`, fileError);
-    }
+
+    // Extract public_id from Cloudinary URL
+    const urlParts = channel.imageUrl.split("/");
+    const filenameWithExt = urlParts[urlParts.length - 1]; // e.g., image123.jpg
+    const filenameWithoutExt = filenameWithExt.split(".")[0]; // image123
+
+    const folderPath = urlParts
+      .slice(urlParts.indexOf("upload") + 1, -1)
+      .join("/");
+
+    const publicId = folderPath
+      ? `${folderPath}/${filenameWithoutExt}`
+      : filenameWithoutExt;
+
+    // Delete image from Cloudinary
+    await cloudinary.uploader.destroy(publicId);
+
+    // Delete from MongoDB
     await Channel.deleteOne({ _id: req.params.id });
-    console.log(`Channel deleted from database: ${req.params.id}`);
+
     res.json({ success: true });
   } catch (error) {
     console.error("Delete channel error:", error);
