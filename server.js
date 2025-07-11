@@ -30,18 +30,16 @@ const FooterLink = require("./models/FooterLink");
 const User = require("./models/User");
 const Category = require("./models/Category");
 
-// Cloudinary Config
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Use Cloudinary for image uploads
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "my_project", // change as needed
+    folder: "my_project",
     allowed_formats: ["jpg", "jpeg", "png"],
     transformation: [{ width: 800, height: 600, crop: "limit" }],
   },
@@ -177,10 +175,9 @@ app.delete("/api/channels/:id", async (req, res) => {
       return res.status(404).json({ error: "Channel not found" });
     }
 
-    // Extract public_id from Cloudinary URL
     const urlParts = channel.imageUrl.split("/");
-    const filenameWithExt = urlParts[urlParts.length - 1]; // e.g., image123.jpg
-    const filenameWithoutExt = filenameWithExt.split(".")[0]; // image123
+    const filenameWithExt = urlParts[urlParts.length - 1];
+    const filenameWithoutExt = filenameWithExt.split(".")[0];
 
     const folderPath = urlParts
       .slice(urlParts.indexOf("upload") + 1, -1)
@@ -190,10 +187,8 @@ app.delete("/api/channels/:id", async (req, res) => {
       ? `${folderPath}/${filenameWithoutExt}`
       : filenameWithoutExt;
 
-    // Delete image from Cloudinary
     await cloudinary.uploader.destroy(publicId);
 
-    // Delete from MongoDB
     await Channel.deleteOne({ _id: req.params.id });
 
     res.json({ success: true });
@@ -203,7 +198,6 @@ app.delete("/api/channels/:id", async (req, res) => {
   }
 });
 
-// Get all categories
 app.get("/api/categories", async (req, res) => {
   try {
     const categories = await Category.find().sort({ name: 1 });
@@ -213,7 +207,6 @@ app.get("/api/categories", async (req, res) => {
   }
 });
 
-// Add a new category
 app.post("/api/categories", async (req, res) => {
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: "Category name required" });
@@ -231,7 +224,6 @@ app.post("/api/categories", async (req, res) => {
   }
 });
 
-// Delete a category
 app.delete("/api/categories/:id", async (req, res) => {
   try {
     await Category.findByIdAndDelete(req.params.id);
